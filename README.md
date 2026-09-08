@@ -6,6 +6,8 @@ dependencies.
 
 **Live demo: https://joinlianjie1985-collab.github.io/itprojectmanagement/**
 
+![The board, showing the four columns with seeded demo tasks](docs/screenshot.png)
+
 > This is not an official system. The organisation, the projects and the people named
 > on the board are all fictional, and no real logos or trademarks are used.
 

@@ -19,3 +19,6 @@ _site/
 # Editor scratch
 *.swp
 *~
+
+# Playwright MCP scratch output
+.playwright-mcp/

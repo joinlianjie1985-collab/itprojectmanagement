@@ -1,7 +1,7 @@
 ---
 description: Scan for secrets, then push the project to GitHub, deploy it via GitHub Pages, and update the README and repo About
 argument-hint: [github repo URL or owner/name] (optional if a remote already exists)
-allowed-tools: Bash(git *), Bash(gh *), Bash(grep *), Bash(rg *), Bash(ls *), Bash(cat *), Bash(find *), Read, Write, Edit, Glob, Grep
+allowed-tools: Bash(git *), Bash(gh *), Bash(grep *), Bash(rg *), Bash(ls *), Bash(cat *), Bash(find *), Read, Write, Edit, Glob, Grep, mcp__playwright__browser_navigate, mcp__playwright__browser_resize, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_close
 ---
 
 # Publish this project to GitHub
@@ -155,6 +155,37 @@ gh run watch --exit-status   # optional, if a run is in flight
 The site URL is `https://<owner>.github.io/<repo>/`. Report it, and note that the
 first deployment can take a couple of minutes.
 
+## Step 3.5 — Screenshot the live site (Playwright MCP)
+
+Capture a current screenshot of the deployed site so the README shows what the app
+actually looks like. This runs **after** the Pages deployment, so the shot reflects
+what is really published rather than an uncommitted local state.
+
+Check that the `playwright` MCP server is connected first (`/mcp`). If it is not
+available, skip this step and say so in the final report — do not silently omit the
+image, and do not leave a broken image link in the README.
+
+1. `browser_resize` to a desktop viewport — 1440x960 is a good default.
+2. `browser_navigate` to the Pages URL. If the deployment has only just finished,
+   the CDN can lag by a minute; if the page 404s, wait and retry once.
+3. `browser_take_screenshot` with `fullPage: true` and a filename such as
+   `screenshot.png`. The file lands in the working directory (or the server's
+   `--output-dir`) — locate it, then move it to `docs/screenshot.png`.
+4. **Look at the image** with the Read tool before committing it. Confirm it shows the
+   real app and not a 404, an error page, a cookie banner or a half-rendered layout.
+   A screenshot nobody checked is worse than none.
+
+Notes:
+
+- For an app served from `file://` rather than Pages, navigate to the absolute
+  `file://` path instead. That needs `--allow-unrestricted-file-access` on the
+  Playwright MCP server.
+- Keep the file reasonably small — a full-page PNG at 1440px wide is typically
+  200-400 KB, which is fine to commit. If it runs to several MB, take a viewport-only
+  shot instead of `fullPage`.
+- Add the server's scratch directory (`.playwright-mcp/`) to `.gitignore` so its
+  snapshot YAML files are not committed.
+
 ## Step 4 — README
 
 Create or update `README.md` so it reflects what is actually in the repo — read the
@@ -162,6 +193,10 @@ code first, never describe features from assumption. Include:
 
 - Project title and a one-or-two-sentence description of what it does.
 - **A live demo link to the Pages URL, near the top.**
+- **The screenshot from step 3.5**, embedded just under that link with
+  descriptive alt text, e.g. `![The board, showing ...](docs/screenshot.png)`.
+  Use a repo-relative path so it renders on GitHub. Omit this line entirely if
+  step 3.5 was skipped — never reference an image that does not exist.
 - How to run it locally (for a `file://` project, say plainly that you open the file).
 - Key features, kept honest and short.
 - Tech notes and any deliberate constraints (e.g. vanilla JS, single file, no build,
@@ -203,6 +238,7 @@ Finish with a short summary:
 - Repo URL and the commit(s) pushed.
 - Pages URL, and whether the deployment run actually succeeded.
 - README and About: created or updated.
+- Screenshot: captured and embedded, or why it was skipped.
 - Anything the user must still do by hand (enabling Pages, setting About without `gh`,
   rotating a leaked credential).
 
