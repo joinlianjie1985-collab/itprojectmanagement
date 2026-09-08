@@ -22,3 +22,7 @@ _site/
 
 # Playwright MCP scratch output
 .playwright-mcp/
+
+# Third-party skills — restore with: npx skills experimental_install
+# (kept out of git; skills-lock.json pins source + content hash)
+.claude/skills/

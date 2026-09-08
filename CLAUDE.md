@@ -84,6 +84,46 @@ JSC=/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc
 "$JSC" driver.js
 ```
 
-Assert on `store["board"].innerHTML` and `store["summary-strip"].innerHTML` after init. Then open
-the file in a browser for the parts the stub can't cover: drag and drop, focus rings, and the
-sub-768px stacked layout.
+Assert on `store["board"].innerHTML` and `store["summary-strip"].innerHTML` after init. For the
+parts the stub can't cover — drag and drop, focus rings, and the sub-768px stacked layout — drive
+a real browser through the Playwright MCP server (see below) rather than checking by hand:
+`browser_navigate` to the `file://` path, then `browser_snapshot`, `browser_drag`,
+`browser_resize` and `browser_take_screenshot`.
+
+## Local tooling
+
+None of this is an application dependency. The app stays vanilla, single-file and buildless; these
+are agent tools that happen to live in the repo. Nothing here may be imported by `index.html`, and
+no `package.json` or `node_modules` belongs in the project root.
+
+**Node** is at `~/.local/node` (v24 LTS, installed from the official tarball, `bin` added to
+`~/.zshrc`). It exists only so `npx` can run the tools below. It is not installed system-wide.
+
+**Playwright MCP** is configured project-level in `.mcp.json` and used for browser verification and
+for the README screenshot. Two flags there are load-bearing and should not be dropped:
+
+- `--browser chromium` — the server's default is real Google Chrome, which is not installed on
+  this machine. `chromium` works despite being undocumented in `--help`.
+- `--allow-unrestricted-file-access` — Playwright blocks the `file:` protocol outright, and this
+  app is meant to be opened from `file://`. Note this grants the browser tool access to any
+  `file://` URL on the machine, not just this project.
+
+Its scratch directory `.playwright-mcp/` is gitignored.
+
+**Skills** are installed project-level under `.claude/skills/` but are *not* committed — one of the
+upstream repos is archived with no licence, so it is not ours to redistribute. `skills-lock.json`
+is committed instead and records each skill's source, path and content hash. To restore them:
+
+```sh
+npx skills add https://github.com/rysweet/amplihack --skill cybersecurity-analyst --agent claude-code --copy -y
+npx skills add https://github.com/saltbo/agent-kanban --skill agent-kanban --agent claude-code --copy -y
+npx skills add https://github.com/nextlevelbuilder/ui-ux-pro-max-skill --skill ui-ux-pro-max --agent claude-code --copy -y
+```
+
+Do *not* use `npx skills experimental_install` for this. It reads the lockfile and does fetch all
+three, but it ignores `--agent` and always writes to `.agents/skills/`, which Claude Code does not
+read. The agent identifier is `claude-code`, not `claude`.
+
+**`/publish-github`** (`.claude/commands/publish-github.md`) is the project-level slash command for
+shipping: it scans for secrets first, then pushes, deploys Pages, screenshots the live site, and
+updates the README and repo About.
