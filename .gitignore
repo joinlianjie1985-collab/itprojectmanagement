@@ -23,6 +23,9 @@ _site/
 # Playwright MCP scratch output
 .playwright-mcp/
 
-# Third-party skills — restore with: npx skills experimental_install
-# (kept out of git; skills-lock.json pins source + content hash)
+# Third-party skills — kept out of git (one upstream repo is archived with no
+# licence, so it is not ours to redistribute). skills-lock.json pins the source
+# and content hash of each. Restore with the `skills add` commands in CLAUDE.md,
+# NOT `experimental_install` — that writes to .agents/skills/, which Claude Code
+# does not read.
 .claude/skills/
