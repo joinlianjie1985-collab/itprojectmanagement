@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Secrets — never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+.netrc
+.npmrc
+
+# Local build output (the Pages workflow builds _site on the runner)
+_site/
+
+# Editor scratch
+*.swp
+*~
