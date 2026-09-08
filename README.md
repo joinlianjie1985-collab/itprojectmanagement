@@ -6,7 +6,7 @@ dependencies.
 
 **Live demo: https://joinlianjie1985-collab.github.io/itprojectmanagement/**
 
-![The board, showing the four columns with seeded demo tasks](docs/screenshot.png)
+![The board: four colour-accented columns — Backlog, In Progress, Blocked, Done — with seeded demo tasks](docs/screenshot.png)
 
 > This is not an official system. The organisation, the projects and the people named
 > on the board are all fictional, and no real logos or trademarks are used.
@@ -23,7 +23,9 @@ open itprojectmanagement/index.html
 
 ## What it does
 
-- **Four columns** — Backlog, In Progress, Blocked and Done, each with a count badge.
+- **Four columns** — Backlog, In Progress, Blocked and Done, each with a count badge
+  and its own accent colour. Colour is a secondary cue only; every column is also
+  labelled, so nothing depends on colour alone.
 - **Add tasks** through a modal form with a title, description, project, category,
   assignee, priority and due date. Validation errors appear inline under each field.
 - **Move cards** by dragging them between columns, or through a keyboard-accessible
@@ -36,6 +38,9 @@ open itprojectmanagement/index.html
 - **Overdue highlighting** for any card past its due date that is not yet Done.
 - **Email notification** on new tasks, sent through FormSubmit's AJAX endpoint.
 - **Responsive layout** that stacks the columns below 768px.
+- **Accessible by construction** — WCAG AA contrast on all text, a visible focus ring
+  that is never removed, sequential heading levels, and `prefers-reduced-motion`
+  respected on card hover.
 
 ## Notes on how it is built
 
