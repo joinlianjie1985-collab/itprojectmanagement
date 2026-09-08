@@ -5,11 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>UOB IT PMO — Project Board</title>
 
+<!-- Content Security Policy (defence in depth).
+     default-src 'none' denies everything not named below, so a future
+     <img src=evil>, <iframe>, or font/media load fails closed rather than
+     silently succeeding.
+
+     'unsafe-inline' is unavoidable here: the hard constraint is one file with
+     no build step, so script and style are inline and there is nothing to hash
+     against across edits. It is stated plainly rather than hidden — this CSP
+     does NOT stop script injection. What it does buy:
+
+       connect-src  the only network destination is FormSubmit. Even if script
+                    ran, it could not POST the board to an attacker's server.
+       img-src      data: only — the inline favicon. No pixel can beacon out.
+       base-uri     an injected <base> cannot re-point relative URLs.
+       form-action  a form cannot be made to POST anywhere.
+       object-src   no plugins.
+
+     frame-ancestors and X-Frame-Options are deliberately absent: both are
+     header-only, meta-tag versions are ignored, and a file:// page has no
+     server to set headers. Clickjacking is therefore NOT mitigated here. -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'none';
+  script-src 'unsafe-inline';
+  style-src 'unsafe-inline';
+  img-src data:;
+  connect-src https://formsubmit.co;
+  base-uri 'none';
+  form-action 'none';
+  object-src 'none'" />
+
+<!-- Do not leak the board's URL (or local file path) to FormSubmit. -->
+<meta name="referrer" content="no-referrer" />
+
 <!-- Inline data-URI favicon. Browsers request /favicon.ico by default; on a
      static host with no such file that is a guaranteed 404 in the console.
      Declaring the icon inline satisfies the request without an image file
      and keeps the "no external resources" constraint intact. -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b2545'/%3E%3Crect x='6' y='8' width='5' height='16' rx='1.5' fill='%231d6ac4'/%3E%3Crect x='13.5' y='8' width='5' height='11' rx='1.5' fill='%235a9be0'/%3E%3Crect x='21' y='8' width='5' height='7' rx='1.5' fill='%23a9c4e6'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2304352b'/%3E%3Crect x='6' y='8' width='5' height='16' rx='1.5' fill='%230d9488'/%3E%3Crect x='13.5' y='8' width='5' height='11' rx='1.5' fill='%2314b8a6'/%3E%3Crect x='21' y='8' width='5' height='7' rx='1.5' fill='%23ccfbf1'/%3E%3C/svg%3E" />
 
 <!-- ============================================================
      UOB IT PMO — internal demo / training tool.
@@ -23,28 +56,40 @@
      1. DESIGN TOKENS — palette, spacing scale, radii, shadows
      ============================================================ */
   :root {
-    /* Corporate blue palette (neutral, not a brand asset) */
-    --c-blue-900: #0b2545;
-    --c-blue-800: #123a6b;
-    --c-blue-700: #17529b;
-    --c-blue-600: #1d6ac4;
-    --c-blue-100: #e4eefb;
-    --c-blue-050: #f2f7fd;
+    /* Green / teal palette. Base hues from the ui-ux-pro-max "Productivity
+       Tool" profile (primary #0D9488, surface #F0FDFA, ink #134E4A); the
+       900/800 steps are darkened from those so header text clears WCAG AA. */
+    --c-brand-900: #04352b;
+    --c-brand-800: #0a5245;
+    --c-brand-700: #0f766e;
+    --c-brand-600: #0d9488;
+    --c-brand-500: #14b8a6;
+    --c-brand-100: #ccfbf1;
+    --c-brand-050: #f0fdfa;
 
-    --c-ink:      #16202e;
-    --c-ink-soft: #5a6b80;
-    --c-line:     #d7e0ea;
+    --c-ink:      #123c38;
+    --c-ink-soft: #47635f;
+    --c-line:     #cfe6e0;
     --c-surface:  #ffffff;
-    --c-canvas:   #eef2f7;
+    --c-canvas:   #eaf4f1;
 
-    /* Priority / status accents */
-    --c-critical: #c62828;
-    --c-high:     #d98000;
-    --c-medium:   #1d6ac4;
-    --c-low:      #8a97a6;
-    --c-success:  #1e7a48;
-    --c-warn:     #a9640b;
-    --c-danger:   #c62828;
+    /* Priority / status accents. Deliberately NOT all green: priority must
+       stay distinguishable at a glance, so only "Medium" joins the brand
+       hue and the rest keep their conventional semantics. */
+    --c-critical: #b91c1c;
+    --c-high:     #b45309;
+    --c-medium:   #0d9488;
+    --c-low:      #64748b;
+    --c-success:  #15803d;
+    --c-warn:     #a16207;
+    --c-danger:   #b91c1c;
+
+    /* Per-column accent — gives each column an identity in the rail and
+       the count badge without relying on colour alone (labels remain). */
+    --c-col-backlog:  #64748b;
+    --c-col-progress: #0d9488;
+    --c-col-blocked:  #b45309;
+    --c-col-done:     #15803d;
 
     /* Spacing scale */
     --s-1: 4px;
@@ -58,8 +103,8 @@
     --r-md: 8px;
     --r-lg: 12px;
 
-    --shadow-1: 0 1px 2px rgba(11, 37, 69, .10);
-    --shadow-2: 0 6px 20px rgba(11, 37, 69, .18);
+    --shadow-1: 0 1px 2px rgba(4, 53, 43, .10);
+    --shadow-2: 0 6px 20px rgba(4, 53, 43, .18);
 
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
             "Helvetica Neue", Arial, "Noto Sans", sans-serif;
@@ -87,7 +132,7 @@
 
   /* Visible focus ring everywhere — never removed */
   :focus-visible {
-    outline: 3px solid var(--c-blue-600);
+    outline: 3px solid var(--c-brand-600);
     outline-offset: 2px;
     border-radius: var(--r-sm);
   }
@@ -106,7 +151,7 @@
      3. HEADER — wordmark, summary strip, add-task button
      ============================================================ */
   .app-header {
-    background: var(--c-blue-900);
+    background: var(--c-brand-900);
     color: #fff;
     padding: var(--s-4) var(--s-5);
   }
@@ -129,9 +174,9 @@
     display: inline-grid;
     place-items: center;
     width: 38px; height: 38px;
-    border: 2px solid var(--c-blue-600);
+    border: 2px solid var(--c-brand-600);
     border-radius: var(--r-md);
-    background: var(--c-blue-800);
+    background: var(--c-brand-800);
     font-weight: 700;
     letter-spacing: .5px;
     font-size: 13px;
@@ -146,14 +191,14 @@
     border: 1px solid transparent;
     border-radius: var(--r-md);
     padding: var(--s-2) var(--s-4);
-    background: var(--c-blue-600);
+    background: var(--c-brand-700);
     color: #fff;
     font-weight: 600;
     cursor: pointer;
     transition: background .15s ease, border-color .15s ease;
   }
-  .btn:hover  { background: var(--c-blue-700); }
-  .btn:active { background: var(--c-blue-800); }
+  .btn:hover  { background: var(--c-brand-800); }
+  .btn:active { background: var(--c-brand-900); }
   .btn[disabled] { opacity: .6; cursor: not-allowed; }
 
   .btn-secondary {
@@ -161,7 +206,7 @@
     border-color: var(--c-line);
     color: var(--c-ink);
   }
-  .btn-secondary:hover { background: var(--c-blue-050); }
+  .btn-secondary:hover { background: var(--c-brand-050); }
 
   /* Live summary strip */
   .summary {
@@ -174,7 +219,7 @@
   }
 
   .summary li {
-    background: var(--c-blue-800);
+    background: var(--c-brand-800);
     border: 1px solid #1c4478;
     border-radius: 999px;
     padding: var(--s-1) var(--s-3);
@@ -219,7 +264,7 @@
     min-width: 180px;
   }
   .field textarea { min-height: 76px; resize: vertical; }
-  .field input:hover, .field select:hover, .field textarea:hover { border-color: var(--c-blue-600); }
+  .field input:hover, .field select:hover, .field textarea:hover { border-color: var(--c-brand-600); }
 
   .field .error-text {
     font-size: 12px;
@@ -244,13 +289,28 @@
   }
 
   .column {
-    background: #e3eaf3;
+    background: #dbebe6;
     border: 1px solid var(--c-line);
+    border-top: 3px solid var(--c-col-backlog);
     border-radius: var(--r-lg);
     display: flex;
     flex-direction: column;
     min-height: 220px;
   }
+
+  /* Per-column accent. Colour is a secondary cue only — the column heading
+     text carries the same information, so this is not colour-alone (WCAG 1.4.1). */
+  .column[data-col="In Progress"] { border-top-color: var(--c-col-progress); }
+  .column[data-col="Blocked"]     { border-top-color: var(--c-col-blocked); }
+  .column[data-col="Done"]        { border-top-color: var(--c-col-done); }
+
+  .column[data-col="Backlog"]     .count-badge { background: var(--c-col-backlog); }
+  /* Badge uses the darker teal, not --c-col-progress: white on #0d9488 is
+     3.74:1 and fails AA for text. The 3px column border keeps #0d9488 —
+     non-text, where the 3:1 threshold (WCAG 1.4.11) applies and it passes. */
+  .column[data-col="In Progress"] .count-badge { background: var(--c-brand-700); }
+  .column[data-col="Blocked"]     .count-badge { background: var(--c-col-blocked); }
+  .column[data-col="Done"]        .count-badge { background: var(--c-col-done); }
 
   .column-header {
     display: flex;
@@ -261,10 +321,10 @@
     border-bottom: 1px solid var(--c-line);
   }
 
-  .column-header h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--c-blue-900); }
+  .column-header h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--c-brand-900); }
 
   .count-badge {
-    background: var(--c-blue-700);
+    background: var(--c-brand-700);
     color: #fff;
     border-radius: 999px;
     min-width: 24px;
@@ -286,8 +346,8 @@
 
   /* Drop-target highlight */
   .column-body.drop-target {
-    background: var(--c-blue-100);
-    box-shadow: inset 0 0 0 2px var(--c-blue-600);
+    background: var(--c-brand-100);
+    box-shadow: inset 0 0 0 2px var(--c-brand-600);
   }
 
   .empty-hint {
@@ -309,6 +369,22 @@
     padding: var(--s-3);
     box-shadow: var(--shadow-1);
     cursor: grab;
+    transition: box-shadow .15s ease, border-color .15s ease, transform .15s ease;
+  }
+
+  /* Hover feedback on a draggable object. Movement is 1px — enough to read as
+     "liftable" without shifting neighbouring cards. */
+  .card:hover {
+    box-shadow: var(--shadow-2);
+    border-color: var(--c-brand-500);
+    transform: translateY(-1px);
+  }
+  .card:active { cursor: grabbing; }
+
+  /* Respect users who have asked the OS for reduced motion. */
+  @media (prefers-reduced-motion: reduce) {
+    .card { transition: none; }
+    .card:hover { transform: none; }
   }
   .card:active { cursor: grabbing; }
   .card.dragging { opacity: .45; }
@@ -329,11 +405,11 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: .4px;
-    color: var(--c-blue-700);
+    color: var(--c-brand-700);
     font-variant-numeric: tabular-nums;
   }
 
-  .card h4 { margin: var(--s-2) 0 var(--s-1); font-size: 14px; }
+  .card h3 { margin: var(--s-2) 0 var(--s-1); font-size: 14px; }
 
   .card-desc {
     margin: 0 0 var(--s-2);
@@ -377,9 +453,9 @@
     border-radius: var(--r-sm);
     padding: 1px var(--s-2);
     font-size: 11px;
-    background: var(--c-blue-050);
-    border: 1px solid var(--c-blue-100);
-    color: var(--c-blue-800);
+    background: var(--c-brand-050);
+    border: 1px solid var(--c-brand-100);
+    color: var(--c-brand-800);
   }
 
   .overdue-badge {
@@ -423,10 +499,10 @@
     padding: 2px var(--s-2);
     font-size: 12px;
     cursor: pointer;
-    color: var(--c-blue-700);
+    color: var(--c-brand-700);
     font-weight: 600;
   }
-  .link-btn:hover { background: var(--c-blue-050); }
+  .link-btn:hover { background: var(--c-brand-050); }
 
   .move-menu {
     display: flex;
@@ -434,8 +510,8 @@
     gap: var(--s-1);
     width: 100%;
     padding: var(--s-2);
-    background: var(--c-blue-050);
-    border: 1px solid var(--c-blue-100);
+    background: var(--c-brand-050);
+    border: 1px solid var(--c-brand-100);
     border-radius: var(--r-sm);
   }
 
@@ -521,7 +597,7 @@
   .toast {
     background: var(--c-surface);
     border: 1px solid var(--c-line);
-    border-left: 5px solid var(--c-blue-600);
+    border-left: 5px solid var(--c-brand-600);
     border-radius: var(--r-md);
     box-shadow: var(--shadow-2);
     padding: var(--s-3) var(--s-4);
@@ -767,6 +843,12 @@ const state = {
    UTILITIES
    ================================================================ */
 
+/* Control characters carry no meaning in any field here and are a common
+   smuggling vector (header injection, log forging, bidi/RTL-override display
+   spoofing). Rejected at validation rather than silently stripped, so the user
+   sees why. \u202e etc. are the bidi overrides. */
+const CONTROL_CHARS = /[\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e]/;
+
 /* Escape every user-supplied string before it reaches innerHTML. */
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -949,7 +1031,7 @@ function renderCard(task) {
         '<span class="task-id">' + escapeHtml(task.id) + "</span>" +
         deleteHtml +
       "</div>" +
-      "<h4>" + escapeHtml(task.title) + "</h4>" +
+      "<h3>" + escapeHtml(task.title) + "</h3>" +
       descHtml +
       '<dl class="card-meta">' +
         "<dt>Project</dt><dd>" + escapeHtml(task.project) + "</dd>" +
@@ -979,9 +1061,10 @@ function renderBoard() {
       : '<p class="empty-hint">' + (filtersAreActive() ? "No matching tasks" : "No tasks") + "</p>";
 
     return (
-      '<section class="column" aria-label="' + escapeHtml(col.key) + '">' +
+      '<section class="column" data-col="' + escapeHtml(col.key) + '"' +
+      ' aria-label="' + escapeHtml(col.key) + '">' +
         '<div class="column-header">' +
-          "<h3>" + escapeHtml(col.key) + "</h3>" +
+          "<h2>" + escapeHtml(col.key) + "</h2>" +
           '<span class="count-badge" title="' + escapeHtml(col.hint) + '">' +
             cards.length +
             '<span class="visually-hidden"> tasks shown</span>' +
@@ -1093,12 +1176,38 @@ function showToast(title, message, kind) {
    FORMSUBMIT — AJAX JSON endpoint so the page never navigates away.
    A failure here must never break the board (see handleSubmit).
    ================================================================ */
+/* Strip CR/LF and other control characters before a value is used in an email
+   header. FormSubmit builds the Subject: header from _subject, and a header
+   containing a newline is the classic header-injection primitive (extra Bcc:,
+   forged Reply-To:). A <input type=text> cannot itself contain a newline, so
+   this is defence in depth against a future change to a textarea — cheap, and
+   it removes the assumption rather than relying on it. */
+function headerSafe(value) {
+  return String(value == null ? "" : value)
+    /* eslint-disable-next-line no-control-regex */
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .slice(0, 120)
+    .trim();
+}
+
 async function notifyNewTask(task) {
-  const res = await fetch(FORMSUBMIT_ENDPOINT, {
+  /* Bound the request. Without this an unanswered connection leaves the
+     promise pending forever; the board stays usable either way, but the
+     warning toast would never fire and the failure would be invisible. */
+  const controller = new AbortController();
+  const timer = window.setTimeout(function () { controller.abort(); }, 10000);
+
+  let res;
+  try {
+    res = await fetch(FORMSUBMIT_ENDPOINT, {
     method: "POST",
+    /* No cookies or credentials — this is an unauthenticated third party. */
+    credentials: "omit",
+    referrerPolicy: "no-referrer",
+    signal: controller.signal,
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({
-      _subject: "[UOB IT PMO] New task " + task.id + ": " + task.title,
+      _subject: headerSafe("[UOB IT PMO] New task " + task.id + ": " + task.title),
       _template: "table",
       _captcha: "false",
       "Task ID": task.id,
@@ -1113,6 +1222,11 @@ async function notifyNewTask(task) {
       "Submitted At": new Date().toISOString()
     })
   });
+  } finally {
+    window.clearTimeout(timer);
+  }
+  /* Report the status code but not the response body — a third-party error
+     page is untrusted content and has no business reaching our UI. */
   if (!res.ok) throw new Error("FormSubmit failed: " + res.status);
   return res.json();
 }
@@ -1189,7 +1303,14 @@ function validateForm() {
   if (PROJECTS.indexOf(values.project) === -1) fail("project", "Choose a project or workstream.");
   if (CATEGORIES.indexOf(values.category) === -1) fail("category", "Choose a category.");
 
+  /* The HTML maxlength attribute is a hint, not a control — it is trivially
+     removed in devtools. Every bound is therefore re-checked here, which is
+     the only place that actually gates the data into state.tasks. */
   if (!values.assignee) fail("assignee", "Assignee is required.");
+  else if (values.assignee.length > 60) fail("assignee", "Keep the assignee to 60 characters or fewer.");
+  else if (CONTROL_CHARS.test(values.assignee)) fail("assignee", "Remove control characters from the assignee.");
+
+  if (values.title && CONTROL_CHARS.test(values.title)) fail("title", "Remove control characters from the title.");
 
   if (PRIORITIES.indexOf(values.priority) === -1) fail("priority", "Choose a priority.");
 
